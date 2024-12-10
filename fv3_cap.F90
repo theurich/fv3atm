@@ -179,7 +179,7 @@ module fv3atm_cap_mod
     type(ESMF_Clock)                       :: clock
 
     character(len=10)                      :: value
-    character(240)                         :: msgString
+    character(400)                         :: msgString
     logical                                :: isPresent, isSet
     type(ESMF_VM)                          :: vm, wrtVM
     type(ESMF_Time)                        :: currTime, startTime
@@ -786,7 +786,7 @@ module fv3atm_cap_mod
 
             call ESMF_LogSet(flush=.true., rc=rc)
 
-            write(msgString,"(A,I2.2,',',I2.2,A)") "RH creation for wrtFB(",j,i, ") ...."
+            write(msgString,"(A,I2.2,',',I2.2,A)") "RH creation for wrtFB(",j,i, ") ...."//trim(fcstItemNameList(j))
             call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
 
             if (i==1) then
