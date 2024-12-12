@@ -179,7 +179,7 @@ module fv3atm_cap_mod
     type(ESMF_Clock)                       :: clock
 
     character(len=10)                      :: value
-    character(400)                         :: msgString
+    character(240)                         :: msgString
     logical                                :: isPresent, isSet
     type(ESMF_VM)                          :: vm, wrtVM
     type(ESMF_Time)                        :: currTime, startTime
@@ -784,8 +784,6 @@ module fv3atm_cap_mod
               endif
             endif
 
-            call ESMF_LogSet(flush=.true., rc=rc)
-
             write(msgString,"(A,I2.2,',',I2.2,A)") "RH creation for wrtFB(",j,i, ") ...."//trim(fcstItemNameList(j))
             call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
 
@@ -797,26 +795,25 @@ module fv3atm_cap_mod
               if (rh_file_exist .and. use_saved_routehandles) then
                 if(mype==0) print *,'in fv3cap init, routehandle file ',trim(rh_filename), ' exists'
 
-                call ESMF_VMBarrier(VM, rc=rc)
                 write(msgString,*) "Calling into ESMF_RouteHandleCreate(from file)...", trim(rh_filename)
                 call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
 
+                call ESMF_TraceRegionEnter("ESMF_RouteHandleCreate(from file)", rc=rc)
                 routehandle(j,1) = ESMF_RouteHandleCreate(fileName=trim(rh_filename), rc=rc)
                 if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
+                call ESMF_TraceRegionExit("ESMF_RouteHandleCreate(from file)", rc=rc)
 
-                call ESMF_VMBarrier(VM, rc=rc)
                 write(msgString,*) "... returned from ESMF_RouteHandleCreate(from file)."
                 call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
 
               else
                 ! this is a Store() for the first wrtComp -> must do the Store()
                 if (fieldbundle_uses_redist) then
-                  call ESMF_TraceRegionEnter("ESMF_FieldBundleRedistStore()", rc=rc)
 
-                  call ESMF_VMBarrier(VM, rc=rc)
                   write(msgString,*) "Calling into FieldBundleRedistStore..."
                   call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
 
+                  call ESMF_TraceRegionEnter("ESMF_FieldBundleRedistStore()", rc=rc)
                   call ESMF_FieldBundleRedistStore(fcstFB(j), wrtFB(j,1), &
                                                    routehandle=routehandle(j,1), &
                                                    rc=rc)
@@ -825,21 +822,17 @@ module fv3atm_cap_mod
                     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
                     ! call ESMF_Finalize(endflag=ESMF_END_ABORT)
                   endif
+                  call ESMF_TraceRegionExit("ESMF_FieldBundleRedistStore()", rc=rc)
 
-                  call ESMF_VMBarrier(VM, rc=rc)
                   write(msgString,*) "... returned from FieldBundleRedistStore."
                   call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
 
-                  call ESMF_TraceRegionExit("ESMF_FieldBundleRedistStore()", rc=rc)
-                  call ESMF_LogWrite('af FieldBundleRedistStore', ESMF_LOGMSG_INFO, rc=rc)
-                  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
                 else
-                  call ESMF_TraceRegionEnter("ESMF_FieldBundleRegridStore()", rc=rc)
 
-                  call ESMF_VMBarrier(VM, rc=rc)
                   write(msgString,*) "Calling into FieldBundleRegridStore..."
                   call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
 
+                  call ESMF_TraceRegionEnter("ESMF_FieldBundleRegridStore()", rc=rc)
                   call ESMF_FieldBundleRegridStore(fcstFB(j), wrtFB(j,1), &
                                                    regridMethod=regridmethod, routehandle=routehandle(j,1), &
                                                    unmappedaction=ESMF_UNMAPPEDACTION_IGNORE, &
@@ -848,27 +841,24 @@ module fv3atm_cap_mod
                     call ESMF_LogWrite('fv3_cap.F90:InitializeAdvertise error in ESMF_FieldBundleRegridStore', ESMF_LOGMSG_ERROR, rc=rc)
                     call ESMF_Finalize(endflag=ESMF_END_ABORT)
                   endif
+                  call ESMF_TraceRegionExit("ESMF_FieldBundleRegridStore()", rc=rc)
 
-                  call ESMF_VMBarrier(VM, rc=rc)
                   write(msgString,*) "... returned from FieldBundleRegridStore."
                   call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
 
-                  call ESMF_TraceRegionExit("ESMF_FieldBundleRegridStore()", rc=rc)
-                  call ESMF_LogWrite('af FieldBundleRegridStore', ESMF_LOGMSG_INFO, rc=rc)
-                  if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
                 endif
 
                 if (use_saved_routehandles) then
 
-                  call ESMF_VMBarrier(VM, rc=rc)
-                  write(msgString,*) "Calling into ESMF_RouteHandleWrite..."
+                  write(msgString,*) "Calling into ESMF_RouteHandleWrite...", trim(rh_filename)
                   call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
 
+                  call ESMF_TraceRegionEnter("ESMF_RouteHandleWrite()", rc=rc)
                   call ESMF_RouteHandleWrite(routehandle(j,1), fileName=trim(rh_filename), rc=rc)
                   if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
+                  call ESMF_TraceRegionExit("ESMF_RouteHandleWrite()", rc=rc)
                   if(mype==0) print *,'in fv3cap init, saved routehandle file ',trim(rh_filename)
 
-                  call ESMF_VMBarrier(VM, rc=rc)
                   write(msgString,*) "... returned from ESMF_RouteHandleWrite."
                   call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
 
@@ -882,22 +872,19 @@ module fv3atm_cap_mod
             else
               targetPetList(1:num_pes_fcst)  = fcstPetList(:)
               targetPetList(num_pes_fcst+1:) = petList(:)
-              call ESMF_TraceRegionEnter("ESMF_RouteHandleCreate() in lieu of ESMF_FieldBundleRegridStore()", rc=rc)
 
-              call ESMF_VMBarrier(VM, rc=rc)
               write(msgString,*) "Calling into ESMF_RouteHandleCreate(from RH)..."
               call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
 
+              call ESMF_TraceRegionEnter("ESMF_RouteHandleCreate(from RH) in lieu of ESMF_FieldBundleRegridStore()", rc=rc)
               routehandle(j,i) = ESMF_RouteHandleCreate(routehandle(j,1), &
                                                         originPetList=originPetList, &
                                                         targetPetList=targetPetList, rc=rc)
               if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, line=__LINE__, file=__FILE__)) return
+              call ESMF_TraceRegionExit("ESMF_RouteHandleCreate(from RH) in lieu of ESMF_FieldBundleRegridStore()", rc=rc)
 
-              call ESMF_VMBarrier(VM, rc=rc)
               write(msgString,*) "... returned from ESMF_RouteHandleCreate(from RH)."
               call ESMF_LogWrite(msgString, ESMF_LOGMSG_INFO, rc=rc)
-
-              call ESMF_TraceRegionExit("ESMF_RouteHandleCreate() in lieu of ESMF_FieldBundleRegridStore()", rc=rc)
 
             endif
             write(msgString,"(A,I2.2,',',I2.2,A)") "... returned from RH creation for wrtFB(",j,i, ")."
